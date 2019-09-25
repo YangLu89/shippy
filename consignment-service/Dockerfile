@@ -1,7 +1,27 @@
+# consignment-service/Dockerfile
+
+# We use the official golang image, which contains all the 
+# correct build tools and libraries. Notice `as builder`,
+# this gives this container a name that we can reference later on. 
+FROM golang:alpine as builder
+
+RUN apk --no-cache add git
+
+WORKDIR /go/src/github.com/YangLu89/shippy/consignment-service
+
+# Copy the current code into our workdir
+COPY . .
+
+RUN go mod download
+
+# Build the binary, with a few flags which will allow
+# us to run this binary in Alpine. 
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o consignment-service
+
 FROM alpine:latest
 
 RUN mkdir /app
 WORKDIR /app
-ADD consignment-service /app/consignment-service
+COPY --from=builder /go/src/github.com/YangLu89/shippy/consignment-service/consignment-service .
 
 CMD ["./consignment-service"]
