@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	pb "github.com/YangLu89/shippy/consignment-service/proto/consignment"
+	vesselProto "github.com/YangLu89/shippy/vessel-service/proto/vessel"
 	micro "github.com/micro/go-micro"
 )
 
@@ -18,6 +19,7 @@ type repository interface {
 // Repository - Dummy repository, this simulates the use of a datastore
 // of some kind. We'll replace this with a real implementation later on.
 type Repository struct {
+	mu           sync.RWMutex
 	consignments []*pb.Consignment
 }
 
