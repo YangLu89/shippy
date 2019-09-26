@@ -7,7 +7,7 @@ FROM golang:alpine as builder
 
 RUN apk --no-cache add git
 
-WORKDIR /go/src/github.com/YangLu89/shippy/consignment-service
+WORKDIR /consignment-service
 
 # Copy the current code into our workdir
 COPY . .
@@ -22,6 +22,6 @@ FROM alpine:latest
 
 RUN mkdir /app
 WORKDIR /app
-COPY --from=builder /go/src/github.com/YangLu89/shippy/consignment-service/consignment-service .
+COPY --from=builder /app/consignment-service .
 
 CMD ["./consignment-service"]

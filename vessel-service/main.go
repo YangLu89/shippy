@@ -10,7 +10,7 @@ import (
 	"github.com/micro/go-micro"
 )
 
-type Repository interface {
+type repository interface {
 	FindAvailable(*pb.Specification) (*pb.Vessel, error)
 }
 

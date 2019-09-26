@@ -27,7 +27,7 @@ type Repository struct {
 
 // Create a new consignment
 func (repo *Repository) Create(consignment *pb.Consignment) (*pb.Consignment, error) {
-	repo.mu.lock()
+	repo.mu.Lock()
 	updated := append(repo.consignments, consignment)
 	repo.consignments = updated
 	repo.mu.Unlock()
@@ -59,7 +59,6 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 		MaxWeight: req.Weight,
 		Capacity:  int32(len(req.Containers)),
 	})
-
 	log.Printf("Found vessel: %s \n", vesselResponse.Vessel.Name)
 	if err != nil {
 		return err
@@ -75,12 +74,6 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 	// vessel service
 	req.VesselId = vesselResponse.Vessel.Id
 
-	// Save our consignment
-	consignment, err := s.repo.Create(req)
-	if err != nil {
-		return err
-	}
-
 	// Return matching the `Response` message we created in our
 	// protobuf definition.
 	res.Created = true
@@ -88,7 +81,7 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 	return nil
 }
 
-// GetConsignments -
+// GetConsignments
 func (s *service) GetConsignments(ctx context.Context, req *pb.GetRequest, res *pb.Response) error {
 	consignments := s.repo.GetAll()
 	res.Consignments = consignments
@@ -109,8 +102,10 @@ func main() {
 	// Init will parse the command line flags.
 	srv.Init()
 
+	vesselClient := vesselProto.NewVesselServiceClient("vessel", srv.Client())
+
 	// Register handler
-	pb.RegisterShippingServiceHandler(srv.Server(), &service{repo})
+	pb.RegisterShippingServiceHandler(srv.Server(), &service{repo, vesselClient})
 
 	// Run the server
 	if err := srv.Run(); err != nil {
