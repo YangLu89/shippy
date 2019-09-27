@@ -2,38 +2,55 @@
 package main
 
 import (
-	"context"
-
 	pb "github.com/YangLu89/shippy/consignment-service/proto/consignment"
-	"go.mongodb.org/mongo-driver/mongo"
+	"gopkg.in/mgo.v2"
 )
 
-type repository interface {
+const (
+	dbName                = "shippy"
+	consignmentCollection = "consignments"
+)
+
+type Repository interface {
 	Create(consignment *pb.Consignment) error
 	GetAll() ([]*pb.Consignment, error)
+	Close()
 }
 
-// MongoRepository implementation
-type MongoRepository struct {
-	collection *mongo.Collection
+type ConsignmentRepository struct {
+	session *mgo.Session
 }
 
 // Create -
-func (repository *MongoRepository) Create(consignment *pb.Consignment) error {
-	_, err := repository.collection.InsertOne(context.Background(), consignment)
+func (repo *ConsignmentRepository) Create(consignment *pb.Consignment) error {
+	err := repo.collection().Insert(consignment)
 	return err
 }
 
 // GetAll -
-func (repository *MongoRepository) GetAll() ([]*pb.Consignment, error) {
-	cur, err := repository.collection.Find(context.Background(), nil, nil)
+func (repo *ConsignmentRepository) GetAll() ([]*pb.Consignment, error) {
 	var consignments []*pb.Consignment
-	for cur.Next(context.Background()) {
-		var consignment *pb.Consignment
-		if err := cur.Decode(&consignment); err != nil {
-			return nil, err
-		}
-		consignments = append(consignments, consignment)
-	}
+	// Find normally takes a query, but as we want everything, we can nil this.
+	// We then bind our consignments variable by passing it as an argument to .All().
+	// That sets consignments to the result of the find query.
+	// There's also a `One()` function for single results.
+	err := repo.collection().Find(nil).All(&consignments)
 	return consignments, err
+}
+
+// Close closes the database session after each query has ran.
+// Mgo creates a 'master' session on start-up, it's then good practice
+// to clone a new session for each request that's made. This means that
+// each request has its own database session. This is safer and more efficient,
+// as under the hood each session has its own database socket and error handling.
+// Using one main database socket means requests having to wait for that session.
+// I.e this approach avoids locking and allows for requests to be processed concurrently. Nice!
+// But... it does mean we need to ensure each session is closed on completion. Otherwise
+// you'll likely build up loads of dud connections and hit a connection limit. Not nice!
+func (repo *ConsignmentRepository) Close() {
+	repo.session.Close()
+}
+
+func (repo *ConsignmentRepository) collection() *mgo.Collection {
+	return repo.session.DB(dbName).C(consignmentCollection)
 }

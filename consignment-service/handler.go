@@ -2,22 +2,33 @@
 package main
 
 import (
-	"context"
 	"log"
 
 	pb "github.com/YangLu89/shippy/consignment-service/proto/consignment"
 	vesselProto "github.com/YangLu89/shippy/vessel-service/proto/vessel"
+	"golang.org/x/net/context"
+	"gopkg.in/mgo.v2"
 )
 
-type handler struct {
-	repository
+// Service should implement all of the methods to satisfy the service
+// we defined in our protobuf definition. You can check the interface
+// in the generated code itself for the exact method signatures etc
+// to give you a better idea.
+type service struct {
+	session      *mgo.Session
 	vesselClient vesselProto.VesselServiceClient
+}
+
+func (s *service) GetRepo() Repository {
+	return &ConsignmentRepository{s.session.Clone()}
 }
 
 // CreateConsignment - we created just one method on our service,
 // which is a create method, which takes a context and a request as an
 // argument, these are handled by the gRPC server.
-func (s *handler) CreateConsignment(ctx context.Context, req *pb.Consignment, res *pb.Response) error {
+func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment, res *pb.Response) error {
+	repo := s.GetRepo()
+	defer repo.Close()
 
 	// Here we call a client instance of our vessel service with our consignment weight,
 	// and the amount of containers as the capacity value
@@ -35,7 +46,7 @@ func (s *handler) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 	req.VesselId = vesselResponse.Vessel.Id
 
 	// Save our consignment
-	if err = s.repository.Create(req); err != nil {
+	if err = repo.Create(req); err != nil {
 		return err
 	}
 
@@ -45,8 +56,11 @@ func (s *handler) CreateConsignment(ctx context.Context, req *pb.Consignment, re
 }
 
 // GetConsignments -
-func (s *handler) GetConsignments(ctx context.Context, req *pb.GetRequest, res *pb.Response) error {
-	consignments, err := s.repository.GetAll()
+func (s *service) GetConsignments(ctx context.Context, req *pb.GetRequest, res *pb.Response) error {
+	repo := s.GetRepo()
+	defer repo.Close()
+
+	consignments, err := repo.GetAll()
 	if err != nil {
 		return err
 	}

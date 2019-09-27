@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -18,30 +17,40 @@ const (
 )
 
 func main() {
-	// Set-up micro instance
+
+	// Database host from the environment variables
+	host := os.Getenv("DB_HOST")
+
+	if host == "" {
+		host = defaultHost
+	}
+
+	session, err := CreateSession(host)
+
+	// Mgo creates a 'master' session, we need to end that session
+	// before the main function closes.
+	defer session.Close()
+
+	if err != nil {
+
+		// We're wrapping the error returned from our CreateSession
+		// here to add some context to the error.
+		log.Panicf("Could not connect to datastore with host %s - %v", host, err)
+	}
+
+	// Create a new service. Optionally include some options here.
 	srv := micro.NewService(
-		micro.Name("shippy.service.consignment"),
+		micro.Name("consignment"),
+		micro.Version("latest"),
 	)
 
+	vesselClient := vesselProto.NewVesselServiceClient("vessel", srv.Client())
+
+	// Init will parse the command line flags.
 	srv.Init()
 
-	uri := os.Getenv("DB_HOST")
-	if uri == "" {
-		uri = defaultHost
-	}
-	client, err := CreateClient(uri)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer client.Disconnect(context.TODO())
-
-	consignmentCollection := client.Database("shippy").Collection("consignments")
-
-	repository := &MongoRepository{consignmentCollection}
-	vesselClient := vesselProto.NewVesselServiceClient("shippy.service.client", srv.Client())
-	h := &handler{repository, vesselClient}
-
 	// Register handlers
+	h := &service{session, vesselClient}
 	pb.RegisterShippingServiceHandler(srv.Server(), h)
 
 	// Run the server
