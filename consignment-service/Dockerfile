@@ -7,7 +7,7 @@ FROM golang:alpine as builder
 
 RUN apk --no-cache add git
 
-WORKDIR /consignment-service
+WORKDIR /app/consignment-service
 
 # Copy the current code into our workdir
 COPY . .
@@ -16,7 +16,7 @@ RUN go mod download
 
 # Build the binary, with a few flags which will allow
 # us to run this binary in Alpine. 
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o consignment-service
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o consignment-service main.go repository.go handler.go datastore.go
 
 FROM alpine:latest
 
