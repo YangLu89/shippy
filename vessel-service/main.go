@@ -21,6 +21,7 @@ func createDummyData(repo Repository) {
 	}
 	for _, v := range vessels {
 		repo.Create(v)
+		log.Printf("Added vessel: %s to datastore", v.Id)
 	}
 }
 
@@ -35,7 +36,8 @@ func main() {
 	defer session.Close()
 
 	if err != nil {
-		log.Fatalf("Error connecting to datastore: %v", err)
+		log.Printf("Error connecting to datastore: %s", host)
+		log.Fatalf("Error: %v", err)
 	}
 
 	repo := &VesselRepository{session.Copy()}
@@ -43,7 +45,7 @@ func main() {
 	createDummyData(repo)
 
 	srv := micro.NewService(
-		micro.Name("go.micro.srv.vessel"),
+		micro.Name("vessel"),
 		micro.Version("latest"),
 	)
 
