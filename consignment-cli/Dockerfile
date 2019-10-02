@@ -20,5 +20,5 @@ WORKDIR /app
 COPY consignment.json /app/consignment.json
 COPY --from=builder /app/consignment-cli .
 
-ENTRYPOINT ["./consignment-cli", "consignment.json"]
+ENTRYPOINT ["./consignment-cli"]
 CMD ["./consignment-cli"]
